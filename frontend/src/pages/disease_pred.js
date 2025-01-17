@@ -31,14 +31,14 @@ export default function DiseasePrediction() {
 
     try {
       // Replace 'YOUR_API_URL' with the actual endpoint
-      const thinkingMessage = "Thinking..."; // Define the message
+      const thinkingMessage = ""; // Define the message
       setPrediction(thinkingMessage); // Set the thinking message for display
 
       const response = await axios.post("http://127.0.0.1:5000/predict", {
         symptoms: symptoms,
       });
       setIsThinking(false); // Stop thinking effect
-
+      setSymptoms("");
       // Assuming the response has the content in the desired format
       setPrediction(response.data.Doctor.response); // Adjust this based on your API response structure
       setInterval(() => {

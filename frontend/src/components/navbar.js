@@ -37,7 +37,7 @@ export default function Navbar() {
             </Text>
           </Link>
           <Text color="white" cursor="pointer">
-            Logout
+            Login
           </Text>
         </Box>
       </Box>
