@@ -27,9 +27,8 @@ import { FaPlus } from "react-icons/fa";
 import Footer from "../components/footer";
 import Navbar from "../components/navbar";
 
-const JWT =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJjMzc1OTkwMy0yODJhLTQwNzYtYjU4My0xMWMyZjJlM2NmMDEiLCJlbWFpbCI6ImNvZGluZ3dpdGh2aWhpdDA1QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI0Nzg4ZTVmNzhjMTc0ZmVlOWQ4MSIsInNjb3BlZEtleVNlY3JldCI6ImJjZmY3MWZiYjUyOGFhYWYxM2E5ZDk2ZmEyNTU5MGI4ZDRiNjc5MTFjMWU0MzNjYzNjNDQwNDM3NGEyNTc4ODMiLCJleHAiOjE3Njk1MjQ5Njh9.yfivtoEi-XGDGvN8ekRizPdpfAoZ8L3yERwjvAXmhyQ";
-
+const JWT = process.env.JWT;
+console.log(process.env.JWT,"csvsdvsdvs");
   async function uploadBase64(base64String,file_name) {
     try {
       const binaryString = atob(base64String);
