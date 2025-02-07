@@ -20,7 +20,7 @@ export default function Navbar() {
               fontWeight="bold"
               cursor="pointer"
             >
-              CureLink AI
+              Medikeep
             </Text>
           </Link>
         </Box>
@@ -31,14 +31,21 @@ export default function Navbar() {
           gap="20px"
           paddingRight="10"
         >
+          <Link to="/medicine">
+            <Text color="white" cursor="pointer">
+              Medicine Comparison
+            </Text>
+          </Link>
           <Link to="/disease">
             <Text color="white" cursor="pointer">
               Disease Prediction
             </Text>
           </Link>
-          <Text color="white" cursor="pointer">
-            Login
-          </Text>
+          <Link to="/login">
+            <Text color="white" cursor="pointer">
+              Login
+            </Text>
+          </Link>
         </Box>
       </Box>
     </>
