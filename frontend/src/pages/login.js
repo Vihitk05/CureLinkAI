@@ -3,15 +3,16 @@ import Navbar from "../components/navbar";
 import Footer from "../components/footer";
 import { FaCamera, FaFile } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
   const [privateKey, setPrivateKey] = useState("");
-  // eslint-disable-next-line
   const [file, setFile] = useState(null);
+  const [showScanner, setShowScanner] = useState(false); // State to toggle QR scanner
   const toast = useToast();
   const navigate = useNavigate();
+
   // Handle private key file upload
   const handleFileChange = (event) => {
     const uploadedFile = event.target.files[0];
@@ -24,8 +25,49 @@ export default function Login() {
     }
   };
 
+  // Handle QR code scan
+  const handleScan = (data) => {
+    if (data) {
+      setPrivateKey(data); // Set the scanned data as the private key
+      setShowScanner(false); // Hide the scanner after scanning
+    }
+  };
+
+  // Handle QR code scan error
+  const handleError = (err) => {
+    console.error("QR Code Scan Error:", err);
+    // toast({
+    //   title: "Error",
+    //   description: "Failed to scan QR code. Please try again.",
+    //   status: "error",
+    //   duration: 3000,
+    //   isClosable: true,
+    // });
+  };
+
+  // Initialize the QR code scanner
+  useEffect(() => {
+    if (showScanner) {
+      const scanner = new Html5QrcodeScanner(
+        "qr-reader", // ID of the container element
+        { fps: 10, qrbox: 250 }, // Scanner configuration
+        false // Verbose mode (set to true for debugging)
+      );
+
+      // Render the scanner
+      scanner.render(handleScan, handleError);
+
+      // Cleanup function to stop the scanner when the component unmounts or the scanner is closed
+      return () => {
+        scanner.clear().catch((error) => {
+          console.error("Failed to clear QR scanner:", error);
+        });
+      };
+    }
+  }, [showScanner]);
+
   const handleLogin = async () => {
-    if (!email || (!privateKey && !file)) {
+    if (!privateKey && !file) {
       toast({
         title: "Error",
         description: "Please fill in all fields or upload the private key file",
@@ -43,7 +85,6 @@ export default function Login() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
           private_key: privateKey || file, // Use either the typed private key or uploaded file content
         }),
       });
@@ -57,7 +98,7 @@ export default function Login() {
           duration: 3000,
           isClosable: true,
         });
-        navigate('/');
+        navigate("/");
       } else {
         toast({
           title: "Error",
@@ -91,14 +132,6 @@ export default function Login() {
           </Text>
           <Box px="10%" py="10%">
             <Input
-              placeholder="Enter Email"
-              name="email"
-              id="email"
-              mb="2%"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <Input
               placeholder="Enter Private Key*"
               name="pr_key"
               id="pr_key"
@@ -130,10 +163,31 @@ export default function Login() {
                 style={{ display: "none" }}
                 onChange={handleFileChange}
               />
-              <Button width="100%" bgColor="yellow" mt="5%">
+              <Button
+                width="100%"
+                bgColor="yellow"
+                mt="5%"
+                onClick={() => setShowScanner(true)} // Show the QR scanner
+              >
                 <Text mx="10px">Scan QR</Text> <FaCamera ml="2%" />
               </Button>
             </Box>
+
+            {/* QR Code Scanner */}
+            {showScanner && (
+              <Box mt="5%">
+                <div id="qr-reader" style={{ width: "100%" }}></div>
+                <Button
+                  width="100%"
+                  bgColor="red.500"
+                  color="white"
+                  mt="2%"
+                  onClick={() => setShowScanner(false)} // Hide the scanner
+                >
+                  Close Scanner
+                </Button>
+              </Box>
+            )}
 
             <Button
               width="100%"

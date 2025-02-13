@@ -15,17 +15,21 @@ import {
   useDisclosure,
   useToast,
 } from "@chakra-ui/react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
 import MetaMask from "../components/MetaMask";
+import QRCode from "qrcode"; // Import QRCode library
+import html2canvas from "html2canvas"; // Import html2canvas library
 
 export default function Register() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const [walletAddress, setWalletAddress] = useState(null);
   const [privateKey, setPrivateKey] = useState(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState(null); // State to store QR code data URL
+  const qrCodeRef = useRef(null); // Ref for the QR code element
 
   // Input fields state
   const [formData, setFormData] = useState({
@@ -63,6 +67,27 @@ export default function Register() {
         // Correctly extract the private_key from the response
         const responseData = await response.json();
         setPrivateKey(responseData.private_key); // Use responseData.private_key instead of privateKey
+
+        // Debug: Print the private key
+        console.log("Private Key:", responseData.private_key);
+
+        // Generate QR code for the private key
+        QRCode.toDataURL(responseData.private_key, (err, url) => {
+          if (err) {
+            console.error("Failed to generate QR code:", err);
+            toast({
+              title: "Error",
+              description: "Failed to generate QR code.",
+              status: "error",
+              duration: 3000,
+              isClosable: true,
+            });
+          } else {
+            console.log("QR Code Data URL:", url); // Debug: Print the QR code data URL
+            setQrCodeDataUrl(url); // Set the QR code data URL
+          }
+        });
+
         toast({
           title: "Registration Successful",
           description: "Your private key has been generated.",
@@ -104,7 +129,17 @@ export default function Register() {
     document.body.appendChild(element); // Required for Firefox
     element.click();
   };
-  
+
+  const handleDownloadQRCode = () => {
+    if (qrCodeRef.current) {
+      html2canvas(qrCodeRef.current).then((canvas) => {
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = "private_key_qr.png"; // Set download file name
+        link.click();
+      });
+    }
+  };
 
   return (
     <>
@@ -114,12 +149,15 @@ export default function Register() {
           <Image src="/login.png" />
         </Box>
         <Box width="50%" py="5%">
-        {privateKey===null?
-          <Text fontSize="5xl" textAlign="center">
-            Patient Registration
-          </Text>:<Text fontSize="5xl" textAlign="center">
-             Registration Successful
-          </Text>}
+          {privateKey === null ? (
+            <Text fontSize="5xl" textAlign="center">
+              Patient Registration
+            </Text>
+          ) : (
+            <Text fontSize="5xl" textAlign="center">
+              Registration Successful
+            </Text>
+          )}
           <Box px="10%" py="5%">
             {privateKey === null ? (
               <Box>
@@ -236,7 +274,6 @@ export default function Register() {
                 <Text fontWeight="extrabold" fontSize="2xl" textAlign="center" mb="2%">
                   Private Key will be displayed only once:
                 </Text>
-                {/* <Text mb="2%">{privateKey}</Text> */}
                 <Box display="flex" justifyContent="center" flexDirection="column" gap="10px">
                   <Button mr="2%" colorScheme="yellow" onClick={handleCopy} width="100%">
                     Copy Private Key
@@ -245,6 +282,21 @@ export default function Register() {
                   <Button colorScheme="yellow" onClick={handleDownload}>
                     Download Private Key
                   </Button>
+                  <Text fontSize="xl" textAlign="center">OR</Text>
+                  {/* QR Code Section */}
+                  {qrCodeDataUrl && (
+                    <Box textAlign="center">
+                      <img
+                        ref={qrCodeRef}
+                        src={qrCodeDataUrl}
+                        alt="Private Key QR Code"
+                        style={{ width: "200px", height: "200px", margin: "0 auto" }}
+                      />
+                      <Button colorScheme="yellow" mt="2%" onClick={handleDownloadQRCode}>
+                        Download QR Code
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
               </Box>
             )}

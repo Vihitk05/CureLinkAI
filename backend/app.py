@@ -11,8 +11,7 @@ from web3 import Web3
 from pymongo import MongoClient
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 from scraping import *
 
@@ -41,25 +40,30 @@ medicine_df = pd.read_csv('models/disease_drug_data.csv')
 client = MongoClient("mongodb://localhost:27017/")
 db = client.curelink
 documents_collection = db.documents
-print(db)
 users_collection = db.users
 
 # Blockchain setup
 infura_url = os.getenv("INFURA_URL")
-web3 = Web3(Web3.HTTPProvider(infura_url))
+web3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
+# web3 = Web3(Web3.HTTPProvider(infura_url))
 contract_address = os.getenv("CONTRACT_ADDRESS")
 with open("abi.json", "r") as abi_file:
     contract_abi = json.load(abi_file)
 contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
+# Function to generate a unique numeric ID
+def generate_unique_id():
+    last_user = users_collection.find_one(sort=[("id", -1)])
+    return (last_user["id"] + 1) if last_user else 1
 
+# Function to generate key pair
 def generate_key_pair():
     private_key = rsa.generate_private_key(
         public_exponent=65537, key_size=2048, backend=default_backend())
     public_key = private_key.public_key()
     return private_key, public_key
 
-
+# Function to serialize keys
 def serialize_keys(private_key, public_key):
     private_key_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -72,7 +76,7 @@ def serialize_keys(private_key, public_key):
     )
     return private_key_pem, public_key_pem
 
-
+# Register API
 @app.route("/register", methods=["POST"])
 def register_user():
     data = request.json
@@ -86,15 +90,17 @@ def register_user():
     dob = data.get("dob")
     address = data.get("address")
     aadhar = data.get("aadhar")
-    wallet_address = data.get("walletAddress")
 
     # Validating required fields
-    if not first_name or not last_name or not email or not phone or not wallet_address:
-        return jsonify({"error": "First name, last name, email, phone, and wallet address are required"}), 400
+    if not first_name or not last_name or not email or not phone:
+        return jsonify({"error": "First name, last name, email, and phone are required"}), 400
 
     # Check if user with the same email already exists
     if users_collection.find_one({"email": email}):
         return jsonify({"error": "User with this email already exists"}), 400
+
+    # Generate unique numeric ID
+    user_id = generate_unique_id()
 
     # Generate private and public key pair
     private_key, public_key = generate_key_pair()
@@ -102,6 +108,7 @@ def register_user():
 
     # Insert user data into the database
     users_collection.insert_one({
+        "id": user_id,  # Unique numeric ID
         "first_name": first_name,
         "last_name": last_name,
         "email": email,
@@ -110,13 +117,13 @@ def register_user():
         "dob": dob,
         "address": address,
         "aadhar": aadhar,
-        "wallet_address": wallet_address,
         "public_key": public_key_pem.decode()  # Store only public key in DB
     })
 
-    # Return private key to the frontend
+    # Return private key and user ID to the frontend
     return jsonify({
         "message": "User registered successfully",
+        "user_id": user_id,
         "private_key": private_key_pem.decode()
     }), 201
 
@@ -127,87 +134,177 @@ def login_user():
     if not data:
         return jsonify({"error": "Invalid JSON data"}), 400
 
-    email = data.get("email")
     private_key_input = data.get("private_key")
     
-    if not email or not private_key_input:
-        return jsonify({"error": "Email and private key are required"}), 400
-
-    # Find user in the database
-    user = users_collection.find_one({"email": email})
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    stored_public_key_pem = user["public_key"]
+    if not private_key_input:
+        return jsonify({"error": "Private key is required"}), 400
 
     try:
-        # Deserialize the input private key and stored public key
+        # Deserialize the input private key
         private_key = serialization.load_pem_private_key(
             private_key_input.encode('utf-8'),
             password=None,
             backend=default_backend()
         )
-        public_key = serialization.load_pem_public_key(
-            stored_public_key_pem.encode('utf-8'),
-            backend=default_backend()
-        )
 
         # Derive the public key from the private key
         derived_public_key = private_key.public_key()
+        derived_public_key_pem = derived_public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode('utf-8')
 
-        # Compare public key bytes
-        if public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo) == derived_public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo):
-            return jsonify({"message": "Login successful"}), 200
-        else:
-            return jsonify({"error": "Invalid key pair"}), 401
+        # Find the user in the database using the derived public key
+        user = users_collection.find_one({"public_key": derived_public_key_pem})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Return user information
+        return jsonify({
+            "message": "Login successful",
+            "user_id": user["id"],
+            "first_name": user["first_name"],
+            "last_name": user["last_name"],
+            "email": user["email"]
+        }), 200
 
     except Exception as e:
         return jsonify({"error": "Key validation error", "details": str(e)}), 400
 
 
+# Upload API (updated for multiple IPFS hashes and new fields)
 @app.route("/upload", methods=["POST"])
 def upload_document():
     data = request.json
-    patient_address = data["patient_address"]
-    report_hash = data["report_hash"]
-    private_key = data["private_key"]
+    patient_id = data["patient_id"]
+    report_hashes = data["report_hashes"]  # Array of IPFS hashes
+    disease = data["disease"]
+    hospital = data["hospital"]
+    treatment = data["treatment"]
+    treatment_date = data["treatment_date"]
 
-    nonce = web3.eth.get_transaction_count(
-        web3.eth.account.from_key(private_key).address)
-    tx = contract.functions.addReportByPatient(patient_address, report_hash).buildTransaction({
-        "from": web3.eth.account.from_key(private_key).address,
-        "nonce": nonce,
-        "gas": 2000000,
-        "gasPrice": web3.toWei('20', 'gwei')
-    })
-    signed_tx = web3.eth.account.sign_transaction(tx, private_key)
-    tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-    web3.eth.wait_for_transaction_receipt(tx_hash)
+    # Call the contract function
+    try:
+        tx = contract.functions.addReportByDoctor(
+            patient_id,
+            report_hashes,
+            disease,
+            hospital,
+            treatment,
+            treatment_date
+        ).buildTransaction({
+            "from": web3.eth.accounts[0],  # Use a default account (configured in your node)
+            "gas": 2000000,
+            "gasPrice": web3.toWei('20', 'gwei')
+        })
+        signed_tx = web3.eth.account.sign_transaction(tx, os.getenv("PRIVATE_KEY"))  # Use a server-side private key
+        tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        web3.eth.wait_for_transaction_receipt(tx_hash)
 
-    documents_collection.insert_one({
-        "patient_address": patient_address,
-        "ipfs_hash": report_hash,
-        "upload_date": datetime.utcnow(),
-        "approved": False
-    })
+        # Save document details to MongoDB
+        documents_collection.insert_one({
+            "patient_id": patient_id,
+            "ipfs_hashes": report_hashes,
+            "disease": disease,
+            "hospital": hospital,
+            "treatment": treatment,
+            "treatment_date": treatment_date,
+            "upload_date": datetime.utcnow(),
+            "approved": False
+        })
 
-    return jsonify({"message": "Document uploaded successfully", "ipfs_hash": report_hash})
+        return jsonify({"message": "Document uploaded successfully", "ipfs_hashes": report_hashes}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
+@app.route("/add-patient-document", methods=["POST"])
+def add_patient_document():
+    data = request.json
+    email = data.get("email")
+    report_hashes = data.get("report_hashes")  # Array of IPFS hashes
+    disease = data.get("disease")
+    hospital = data.get("hospital")
+    treatment = data.get("treatment")
+    treatment_date = data.get("treatment_date")
+
+    if not email or not report_hashes or not disease or not hospital or not treatment or not treatment_date:
+        return jsonify({"error": "All fields are required"}), 400
+
+    try:
+        # Find the user by email to get the patient_id
+        user = users_collection.find_one({"email": email})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        patient_id = user["id"]
+
+        # Load the private key from environment variables
+        private_key = os.getenv("PRIVATE_KEY")
+        if not private_key:
+            return jsonify({"error": "Private key not found"}), 400
+
+        # Derive the sender address from the private key
+        account = web3.eth.account.from_key(private_key)
+        sender_address = account.address
+
+        # Get the nonce for the sender address
+        nonce = web3.eth.get_transaction_count(sender_address)
+
+        # Build the transaction
+        tx = contract.functions.addReportByPatient(
+            patient_id,  # uint256
+            report_hashes,  # string[]
+            disease,  # string
+            hospital,  # string
+            treatment,  # string
+            treatment_date  # string
+        ).build_transaction({
+            "from": sender_address,  # Use the address derived from the private key
+            "gas": 2000000,
+            "gasPrice": web3.to_wei('20', 'gwei'),
+            "nonce": nonce,  # Include the nonce
+        })
+
+        # Sign and send the transaction
+        signed_tx = web3.eth.account.sign_transaction(tx, private_key)
+        tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        web3.eth.wait_for_transaction_receipt(tx_hash)
+
+        # Save document details to MongoDB
+        documents_collection.insert_one({
+            "patient_id": patient_id,
+            "ipfs_hashes": report_hashes,
+            "disease": disease,
+            "hospital": hospital,
+            "treatment": treatment,
+            "treatment_date": treatment_date,
+            "upload_date": datetime.utcnow(),
+            "approved": True,
+            "added_by_patient": True
+        })
+
+        return jsonify({
+            "message": "Document added successfully by patient",
+            "transaction_hash": tx_hash.hex(),
+            "ipfs_hashes": report_hashes
+        }), 201
+
+    except Exception as e:
+        print(str(e))
+        return jsonify({"error": str(e)}), 500
+
+# Approve API (updated for patientId)
 @app.route("/approve", methods=["POST"])
 def approve_document():
     data = request.json
-    patient_address = data["patient_address"]
+    patient_id = data["patient_id"]
     report_hash = data["report_hash"]
     private_key = data["private_key"]
 
-    nonce = web3.eth.get_transaction_count(
-        web3.eth.account.from_key(private_key).address)
-    tx = contract.functions.approveReport(patient_address, report_hash).buildTransaction({
+    nonce = web3.eth.get_transaction_count(web3.eth.account.from_key(private_key).address)
+    tx = contract.functions.approveReport(patient_id, report_hash).buildTransaction({
         "from": web3.eth.account.from_key(private_key).address,
         "nonce": nonce,
         "gas": 2000000,
@@ -218,95 +315,58 @@ def approve_document():
     web3.eth.wait_for_transaction_receipt(tx_hash)
 
     documents_collection.update_one(
-        {"patient_address": patient_address, "ipfs_hash": report_hash},
+        {"patient_id": patient_id, "ipfs_hash": report_hash},
         {"$set": {"approved": True, "approval_date": datetime.utcnow()}}
     )
 
     return jsonify({"message": "Document approved successfully"})
 
-
 @app.route("/get-documents", methods=["GET"])
 def get_documents():
-    """
-    API to fetch documents for a given patient address.
-    """
-    patient_address = request.args.get("patient_address")
+    patient_id = request.args.get("patient_id")
 
-    if not patient_address:
-        return jsonify({"error": "Patient address is required"}), 400
+    if not patient_id:
+        return jsonify({"error": "Patient ID is required"}), 400
 
     try:
-        # Call the contract function
-        documents = contract.functions.getReports(patient_address).call()
-        print(documents)
-        if not documents:
+        print("Contract Address:", contract_address)
+        print("Available Contract Functions:", [func.fn_name for func in contract.functions])
+
+        if not web3.is_connected():
+            return jsonify({"error": "Failed to connect to blockchain"}), 500
+
+        patient_id = int(patient_id)  # Ensure integer
+
+        # FIXED: Remove "from" when calling a view function
+        reports = contract.functions.getReports(patient_id).transact({"from":"0xBF963EfCbC3F7E63dd630891EE2bBC67Eb3c8cB9"})
+
+        print("Raw Reports:", reports)
+
+        if not reports:
             return jsonify({"message": "No documents found for this patient"}), 200
 
-        # Format and return the documents
         formatted_documents = [
             {
-                "ipfs_hash": doc[0],
-                "uploaded_by": doc[1],
-                "approved": doc[2],
-                "added_by_patient": doc[3]
+                "ipfs_hashes": report[0],
+                "doctor_id": report[1],
+                "approved": report[2],
+                "added_by_patient": report[3],
+                "disease": report[4],
+                "hospital": report[5],
+                "treatment": report[6],
+                "treatment_date": report[7]
             }
-            for doc in documents
+            for report in reports
         ]
 
-        return jsonify({"documents": "Files"}), 200
+        return jsonify({"documents": formatted_documents}), 200
 
     except Exception as e:
+        print("Error:", str(e))
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/add-patient-document", methods=["POST"])
-def add_patient_document():
-    """
-    API for patients to add their own documents to the blockchain.
-    """
-    data = request.json
-    patient_address = data.get("patient_address")
-    report_hash = data.get("report_hash")
-    private_key = data.get("private_key")
-
-    if not patient_address or not report_hash or not private_key:
-        return jsonify({"error": "Patient address, report hash, and private key are required"}), 400
-
-    try:
-        # Build the transaction
-        nonce = web3.eth.get_transaction_count(
-            web3.eth.account.from_key(private_key).address)
-        tx = contract.functions.addReportByPatient(patient_address, report_hash).buildTransaction({
-            "from": web3.eth.account.from_key(private_key).address,
-            "nonce": nonce,
-            "gas": 2000000,
-            "gasPrice": web3.toWei('20', 'gwei')
-        })
-
-        # Sign and send the transaction
-        signed_tx = web3.eth.account.sign_transaction(tx, private_key)
-        tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        web3.eth.wait_for_transaction_receipt(tx_hash)
-
-        # Save document details to MongoDB
-        documents_collection.insert_one({
-            "patient_address": patient_address,
-            "ipfs_hash": report_hash,
-            "upload_date": datetime.utcnow(),
-            "approved": False,
-            "added_by_patient": True
-        })
-
-        return jsonify({
-            "message": "Document added successfully by patient",
-            "transaction_hash": tx_hash.hex(),
-            "ipfs_hash": report_hash
-        }), 201
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
+# Other APIs (unchanged)
 @app.route("/fetch-medicines", methods=["POST"])
 def fetch_medicine():
     try:
@@ -378,7 +438,6 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)

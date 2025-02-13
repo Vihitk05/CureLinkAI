@@ -1,58 +1,34 @@
 [
 	{
-		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
 			},
 			{
-				"indexed": false,
+				"internalType": "string[]",
+				"name": "reportHashes",
+				"type": "string[]"
+			},
+			{
 				"internalType": "string",
-				"name": "reportHash",
+				"name": "disease",
 				"type": "string"
 			},
 			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "doctor",
-				"type": "address"
-			}
-		],
-		"name": "ReportAdded",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
-			},
-			{
-				"indexed": false,
 				"internalType": "string",
-				"name": "reportHash",
+				"name": "hospital",
 				"type": "string"
-			}
-		],
-		"name": "ReportApproved",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
 			},
 			{
 				"internalType": "string",
-				"name": "reportHash",
+				"name": "treatment",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "treatmentDate",
 				"type": "string"
 			}
 		],
@@ -64,13 +40,33 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string[]",
+				"name": "reportHashes",
+				"type": "string[]"
 			},
 			{
 				"internalType": "string",
-				"name": "reportHash",
+				"name": "disease",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "hospital",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "treatment",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "treatmentDate",
 				"type": "string"
 			}
 		],
@@ -82,14 +78,14 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
 			},
 			{
-				"internalType": "string",
-				"name": "reportHash",
-				"type": "string"
+				"internalType": "uint256",
+				"name": "reportIndex",
+				"type": "uint256"
 			}
 		],
 		"name": "approveReport",
@@ -98,11 +94,55 @@
 		"type": "function"
 	},
 	{
+		"anonymous": false,
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string[]",
+				"name": "reportHashes",
+				"type": "string[]"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "doctorId",
+				"type": "uint256"
+			}
+		],
+		"name": "ReportAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string[]",
+				"name": "reportHashes",
+				"type": "string[]"
+			}
+		],
+		"name": "ReportApproved",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
 			}
 		],
 		"name": "getReports",
@@ -110,14 +150,14 @@
 			{
 				"components": [
 					{
-						"internalType": "string",
-						"name": "reportHash",
-						"type": "string"
+						"internalType": "string[]",
+						"name": "reportHashes",
+						"type": "string[]"
 					},
 					{
-						"internalType": "address",
-						"name": "doctor",
-						"type": "address"
+						"internalType": "uint256",
+						"name": "doctorId",
+						"type": "uint256"
 					},
 					{
 						"internalType": "bool",
@@ -128,6 +168,26 @@
 						"internalType": "bool",
 						"name": "addedByPatient",
 						"type": "bool"
+					},
+					{
+						"internalType": "string",
+						"name": "disease",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "hospital",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "treatment",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "treatmentDate",
+						"type": "string"
 					}
 				],
 				"internalType": "struct MedicalReport.Report[]",
@@ -141,9 +201,9 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
+				"internalType": "uint256",
 				"name": "",
-				"type": "address"
+				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
@@ -154,14 +214,9 @@
 		"name": "reportsByPatient",
 		"outputs": [
 			{
-				"internalType": "string",
-				"name": "reportHash",
-				"type": "string"
-			},
-			{
-				"internalType": "address",
-				"name": "doctor",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "doctorId",
+				"type": "uint256"
 			},
 			{
 				"internalType": "bool",
@@ -172,6 +227,26 @@
 				"internalType": "bool",
 				"name": "addedByPatient",
 				"type": "bool"
+			},
+			{
+				"internalType": "string",
+				"name": "disease",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "hospital",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "treatment",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "treatmentDate",
+				"type": "string"
 			}
 		],
 		"stateMutability": "view",

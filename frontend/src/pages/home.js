@@ -22,48 +22,49 @@ import {
   Th,
   Tbody,
   Td,
+  FormControl,
+  FormLabel,
 } from "@chakra-ui/react";
 import { FaPlus } from "react-icons/fa";
 import Footer from "../components/footer";
 import Navbar from "../components/navbar";
 
-const JWT = process.env.JWT;
-console.log(process.env.JWT,"csvsdvsdvs");
-  async function uploadBase64(base64String,file_name) {
-    try {
-      const binaryString = atob(base64String);
-      const arrayBuffer = new ArrayBuffer(binaryString.length);
-      const uint8Array = new Uint8Array(arrayBuffer);
-  
-      for (let i = 0; i < binaryString.length; i++) {
-        uint8Array[i] = binaryString.charCodeAt(i);
-      }
-  
-      const blob = new Blob([uint8Array], { type: "application/octet-stream" });
-      const file = new File([blob], `${file_name}`);
-  
-      const data = new FormData();
-      data.append("file", file);
-  
-      const upload = await fetch(
-        "https://api.pinata.cloud/pinning/pinFileToIPFS",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${JWT}`,
-          },
-          body: data,
-        }
-      );
-  
-      const uploadRes = await upload.json();
-      console.log(uploadRes);
-      return uploadRes;
-    } catch (error) {
-      console.error("Error uploading to Pinata:", error);
-      throw error;
+const JWT = process.env.REACT_APP_JWT;
+
+async function uploadBase64(base64String, file_name) {
+  try {
+    const binaryString = atob(base64String);
+    const arrayBuffer = new ArrayBuffer(binaryString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    for (let i = 0; i < binaryString.length; i++) {
+      uint8Array[i] = binaryString.charCodeAt(i);
     }
+
+    const blob = new Blob([uint8Array], { type: "application/octet-stream" });
+    const file = new File([blob], `${file_name}`);
+
+    const data = new FormData();
+    data.append("file", file);
+
+    const upload = await fetch(
+      "https://api.pinata.cloud/pinning/pinFileToIPFS",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${JWT}`,
+        },
+        body: data,
+      }
+    );
+
+    const uploadRes = await upload.json();
+    return uploadRes;
+  } catch (error) {
+    console.error("Error uploading to Pinata:", error);
+    throw error;
   }
+}
 
 export default function Home() {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -71,8 +72,12 @@ export default function Home() {
   const [filePreview, setFilePreview] = useState(null); // Store the selected file content preview
   const [loading, setLoading] = useState(false);
   const [uploadedHashes, setUploadedHashes] = useState([]); // Store multiple IPFS hashes
+  const [disease, setDisease] = useState("");
+  const [hospital, setHospital] = useState("");
+  const [treatment, setTreatment] = useState("");
+  const [treatmentDate, setTreatmentDate] = useState("");
   const toast = useToast();
-
+  console.log("dbfdkfba",process.env.REACT_APP_JWT);
   const handleFileChange = (event) => {
     const newFiles = Array.from(event.target.files); // Convert FileList to array
     setFiles((prevFiles) => [...prevFiles, ...newFiles]); // Add new files to existing list
@@ -102,6 +107,11 @@ export default function Home() {
       return;
     }
 
+    if (!disease || !hospital || !treatment || !treatmentDate) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
     setLoading(true);
     const hashes = [];
 
@@ -111,16 +121,16 @@ export default function Home() {
         const reader = new FileReader();
         reader.onload = async () => {
           const base64String = reader.result.split(",")[1];
-          const response = await uploadBase64(base64String,file.name);
-          console.log(response.IpfsHash)
+          const response = await uploadBase64(base64String, file.name);
           hashes.push(response.IpfsHash);
 
-          // When all files have been uploaded, set the state for hashes
+          // When all files have been uploaded, call the API
           if (hashes.length === files.length) {
             setUploadedHashes(hashes);
+            await callAddPatientDocumentAPI(hashes);
             toast({
               title: "Success",
-              description: "All files uploaded successfully.",
+              description: "All files uploaded and document added successfully.",
               status: "success",
               duration: 3000,
               isClosable: true,
@@ -140,6 +150,42 @@ export default function Home() {
     } finally {
       setLoading(false);
       onClose();
+    }
+  };
+
+  const callAddPatientDocumentAPI = async (hashes) => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/add-patient-document", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: "vihitk05@gmail.com", // Replace with the actual email
+          report_hashes: hashes,
+          disease: disease,
+          hospital: hospital,
+          treatment: treatment,
+          treatment_date: treatmentDate,
+        }),
+      });
+
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: "Failed to Add Patient Data.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        throw new Error("Failed to add patient document");
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data);
+    } catch (error) {
+      console.error("Error calling API:", error);
+      throw error;
     }
   };
 
@@ -175,7 +221,7 @@ export default function Home() {
               <Text fontWeight="bold">Age: </Text>21
             </Text>
             <Text display="flex" justifyContent="space-between">
-              <Text fontWeight="bold">Gender: </Text>+91 9820778858
+              <Text fontWeight="bold">Phone: </Text>+91 9820778858
             </Text>
             <Text display="flex" justifyContent="space-between">
               <Text fontWeight="bold">Address: </Text>Dadar(W), Mumbai
@@ -222,6 +268,38 @@ export default function Home() {
           <ModalHeader>Upload New Documents</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
+            <FormControl mb="4">
+              <FormLabel>Disease</FormLabel>
+              <Input
+                value={disease}
+                onChange={(e) => setDisease(e.target.value)}
+                placeholder="Enter disease"
+              />
+            </FormControl>
+            <FormControl mb="4">
+              <FormLabel>Hospital</FormLabel>
+              <Input
+                value={hospital}
+                onChange={(e) => setHospital(e.target.value)}
+                placeholder="Enter hospital name"
+              />
+            </FormControl>
+            <FormControl mb="4">
+              <FormLabel>Treatment</FormLabel>
+              <Input
+                value={treatment}
+                onChange={(e) => setTreatment(e.target.value)}
+                placeholder="Enter treatment details"
+              />
+            </FormControl>
+            <FormControl mb="4">
+              <FormLabel>Treatment Date</FormLabel>
+              <Input
+                type="date"
+                value={treatmentDate}
+                onChange={(e) => setTreatmentDate(e.target.value)}
+              />
+            </FormControl>
             <Input type="file" onChange={handleFileChange} multiple />
             <Box mt="4">
               {files.length > 0 && (
@@ -253,7 +331,7 @@ export default function Home() {
                         <Button
                           size="sm"
                           colorScheme="blue"
-                          onClick={() => handleOpenPDF(file)} // Open PDF in new tab
+                          onClick={() => handleOpenPDF(file)}
                         >
                           Open PDF
                         </Button>
