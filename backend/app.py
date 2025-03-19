@@ -1,4 +1,6 @@
+import base64
 from datetime import datetime
+from io import BytesIO
 import json
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
@@ -14,7 +16,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 from scraping import *
-
+import qrcode
 # Initialize the Flask app
 app = Flask(__name__)
 CORS(app)
@@ -31,7 +33,7 @@ together_model = ChatOpenAI(
 
 # Load the trained model and TF-IDF vectorizer
 model = joblib.load('models/disease_prediction_model.pkl')
-vectorizer = joblib.load('models/tfidf_vectorizer.pkl')
+# vectorizer = joblib.load('models/tfidf_vectorizer.pkl')
 
 # Load the dataset with diseases and drugs
 medicine_df = pd.read_csv('models/disease_drug_data.csv')
@@ -44,8 +46,8 @@ users_collection = db.users
 
 # Blockchain setup
 infura_url = os.getenv("INFURA_URL")
-web3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
-# web3 = Web3(Web3.HTTPProvider(infura_url))
+# web3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
+web3 = Web3(Web3.HTTPProvider(infura_url))
 contract_address = os.getenv("CONTRACT_ADDRESS")
 with open("abi.json", "r") as abi_file:
     contract_abi = json.load(abi_file)
@@ -75,6 +77,24 @@ def serialize_keys(private_key, public_key):
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
     return private_key_pem, public_key_pem
+
+# Function to generate a QR code image and return it as a base64 string
+def generate_qr_code(data):
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    # Convert the image to a base64-encoded string
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 # Register API
 @app.route("/register", methods=["POST"])
@@ -106,6 +126,10 @@ def register_user():
     private_key, public_key = generate_key_pair()
     private_key_pem, public_key_pem = serialize_keys(private_key, public_key)
 
+    # Generate QR code for the private key
+    private_key_str = private_key_pem.decode("utf-8")
+    qr_code_base64 = generate_qr_code(private_key_str)
+
     # Insert user data into the database
     users_collection.insert_one({
         "id": user_id,  # Unique numeric ID
@@ -117,14 +141,15 @@ def register_user():
         "dob": dob,
         "address": address,
         "aadhar": aadhar,
-        "public_key": public_key_pem.decode()  # Store only public key in DB
+        "public_key": public_key_pem.decode("utf-8")  # Store only public key in DB
     })
 
-    # Return private key and user ID to the frontend
+    # Return private key, user ID, and QR code to the frontend
     return jsonify({
         "message": "User registered successfully",
         "user_id": user_id,
-        "private_key": private_key_pem.decode()
+        "private_key": private_key_str,
+        "qr_code": qr_code_base64  # Base64-encoded QR code image
     }), 201
 
 
@@ -321,51 +346,74 @@ def approve_document():
 
     return jsonify({"message": "Document approved successfully"})
 
-@app.route("/get-documents", methods=["GET"])
+def get_file_details(cid):
+    url = "https://api.pinata.cloud/v3/files/public"
+
+    querystring = {"cid":cid}
+
+    headers = {"Authorization": f"Bearer {os.getenv("PINATA_JWT")}"}
+
+    response = requests.request("GET", url, headers=headers, params=querystring).json()
+    
+    file_name = response["data"]["files"][0]["name"]
+    return file_name
+
+
+
+@app.route("/get-documents", methods=["POST"])
 def get_documents():
-    patient_id = request.args.get("patient_id")
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON data"}), 400
+
+    patient_id = data.get("patient_id")
 
     if not patient_id:
-        return jsonify({"error": "Patient ID is required"}), 400
+        return jsonify({"error": "patient ID is required"}), 400
 
     try:
-        print("Contract Address:", contract_address)
-        print("Available Contract Functions:", [func.fn_name for func in contract.functions])
-
         if not web3.is_connected():
             return jsonify({"error": "Failed to connect to blockchain"}), 500
 
         patient_id = int(patient_id)  # Ensure integer
 
-        # FIXED: Remove "from" when calling a view function
-        reports = contract.functions.getReports(patient_id).transact({"from":"0xBF963EfCbC3F7E63dd630891EE2bBC67Eb3c8cB9"})
-
-        print("Raw Reports:", reports)
+        # Call the getReports function from the contract
+        reports = contract.functions.getReports(patient_id).call()
 
         if not reports:
             return jsonify({"message": "No documents found for this patient"}), 200
 
-        formatted_documents = [
-            {
-                "ipfs_hashes": report[0],
-                "doctor_id": report[1],
-                "approved": report[2],
-                "added_by_patient": report[3],
-                "disease": report[4],
-                "hospital": report[5],
-                "treatment": report[6],
-                "treatment_date": report[7]
+        # Parse the JSON string into a list of dictionaries
+        final_reports = json.loads(reports)
+
+        formatted_documents = []
+
+        for report in final_reports:
+            # Get file details for each report
+            file_details = []
+            for hash in report["reportHashes"]:
+                file_name = str(get_file_details(hash))
+                file_url = f"https://magenta-glamorous-silverfish-702.mypinata.cloud/ipfs/{hash}?pinataGatewayToken=aMhZLFDXoAnaPBLjmo98KI89cumJQ5K7i_7xh5p49rS853TVXXJIEINrc_1-pYZv"
+                file_details.append({"file_name": file_name, "file_url": file_url})
+
+            # Format the report with file details
+            formatted_document = {
+                "file_details": file_details,
+                "doctor_id": report["doctorId"],
+                "approved": report["isApproved"],
+                "added_by_patient": report["addedByPatient"],
+                "disease": report["disease"],
+                "hospital": report["hospital"],
+                "treatment": report["treatment"],
+                "treatment_date": report["treatmentDate"]
             }
-            for report in reports
-        ]
+            formatted_documents.append(formatted_document)
 
         return jsonify({"documents": formatted_documents}), 200
 
     except Exception as e:
         print("Error:", str(e))
         return jsonify({"error": str(e)}), 500
-
-
 # Other APIs (unchanged)
 @app.route("/fetch-medicines", methods=["POST"])
 def fetch_medicine():
@@ -387,6 +435,14 @@ def fetch_medicine():
         print(str(e))
         return jsonify({"success":False,"message":str(e)}),500
 
+@app.route("/hello-world", methods=["GET"])
+def hello_world():
+    try:
+        # Call the getHelloWorld function from the contract
+        result = contract.functions.getHelloWorld().call()
+        return jsonify({"message": result}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -438,6 +494,37 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# API to fetch user details by user_id
+@app.route("/fetch-user-details", methods=["POST"])
+def fetch_user_details():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON data"}), 400
+
+    user_id = int(data.get("user_id"))
+    
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
+    try:
+        # Fetch user details from the database using user_id
+        user = users_collection.find_one({"id": user_id})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Remove sensitive fields (e.g., public_key) before sending the response
+        user.pop("public_key", None)
+        user.pop("_id",None)
+        return jsonify({
+            "message": "User details fetched successfully",
+            "user": user
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": "Database error", "details": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

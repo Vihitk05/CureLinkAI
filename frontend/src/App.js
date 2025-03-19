@@ -6,6 +6,7 @@ import Home from "./pages/home";
 import Login from "./pages/login";
 import Register from "./pages/register";
 import MedicineCompare from "./pages/medicine_compare";
+import Landing from "./pages/landing";
 function App() {
   return (
     <ChakraProvider>
@@ -15,7 +16,8 @@ function App() {
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="medicine" element={<MedicineCompare />} />
-          <Route path="" element={<Home />} />
+          <Route path="home" element={<Home />} />
+          <Route path="" element={<Landing />} />
         </Routes>
       </BrowserRouter>
     </ChakraProvider>

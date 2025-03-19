@@ -1,7 +1,21 @@
-import { Box, Text } from "@chakra-ui/react";
-import { Link } from "react-router-dom";
+import { Box, Text, useToast } from "@chakra-ui/react";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function Navbar() {
+export default function Navbar({login=false}) {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const handleLogout = () => {
+    console.log(localStorage.getItem("user_id"));
+    localStorage.removeItem("user_id");
+    toast({
+      title: "Success",
+      description: "Logout Successful",
+      status: "success",
+      duration: 3000,
+      isClosable: true,
+    });
+    navigate("/");
+  }
   return (
     <>
       <Box
@@ -20,7 +34,7 @@ export default function Navbar() {
               fontWeight="bold"
               cursor="pointer"
             >
-              Medikeep
+              CureLink AI
             </Text>
           </Link>
         </Box>
@@ -31,6 +45,11 @@ export default function Navbar() {
           gap="20px"
           paddingRight="10"
         >
+          <Link to="/">
+            <Text color="white" cursor="pointer">
+              Dashboard
+            </Text>
+          </Link>
           <Link to="/medicine">
             <Text color="white" cursor="pointer">
               Medicine Comparison
@@ -41,11 +60,21 @@ export default function Navbar() {
               Disease Prediction
             </Text>
           </Link>
+          {login?
           <Link to="/login">
-            <Text color="white" cursor="pointer">
-              Login
+          <Text color="white" cursor="pointer">
+            Login
+          </Text>
+        </Link>
+          :
+          <Link to="/" onClick={handleLogout}>
+            <Text color="white" cursor="pointer" >
+              Logout
             </Text>
           </Link>
+          
+          }
+          
         </Box>
       </Box>
     </>

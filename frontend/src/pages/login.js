@@ -36,13 +36,6 @@ export default function Login() {
   // Handle QR code scan error
   const handleError = (err) => {
     console.error("QR Code Scan Error:", err);
-    // toast({
-    //   title: "Error",
-    //   description: "Failed to scan QR code. Please try again.",
-    //   status: "error",
-    //   duration: 3000,
-    //   isClosable: true,
-    // });
   };
 
   // Initialize the QR code scanner
@@ -98,7 +91,8 @@ export default function Login() {
           duration: 3000,
           isClosable: true,
         });
-        navigate("/");
+        localStorage.setItem("user_id",data.user_id);
+        navigate("/home");
       } else {
         toast({
           title: "Error",
@@ -121,7 +115,7 @@ export default function Login() {
 
   return (
     <>
-      <Navbar />
+      <Navbar login={true}/>
       <Box display="flex" justifyContent="space-between" flexDirection="row">
         <Box width="50%" height="fit-content">
           <Image src="/login.png" />

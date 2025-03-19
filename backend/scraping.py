@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-
+import re
 def one_mg(query):
   headers = {
       "referer": "https://www.1mg.com/search/all",
@@ -101,21 +101,21 @@ def apollopharmacy(query):
 def pharmeasy(query):
   response = requests.get(f"https://pharmeasy.in/search/all?name={query}").text
   soup = BeautifulSoup(response, 'html.parser')
-  product_card = soup.find_all(class_="ProductCard_medicineUnitContainer__cBkHl")
+  product_card = soup.find_all(class_=re.compile("ProductCard_medicineUnitContainer"))
   if product_card!=[]:
     product_card = product_card[0]
     print("URL:","https://pharmeasy.in"+product_card.a["href"])
     print("Title:",product_card.h1.text)
-    print("Pack Size:",product_card.find(class_="ProductCard_measurementUnit__hsZ2o").text)
-    print("Price:",product_card.find(class_="ProductCard_priceContainer__dqj7Q").text)
-    price = str(product_card.find(class_="ProductCard_priceContainer__dqj7Q").text).replace("MRP","").strip().split("₹")[-1]
+    print("Pack Size:",product_card.find(class_=re.compile("ProductCard_measurementUnit")).text)
+    print("Price:",product_card.find(class_=re.compile("ProductCard_priceContainer")).text)
+    price = str(product_card.find(class_=re.compile("ProductCard_priceContainer")).text).replace("MRP","").strip().split("₹")[-1]
     if "OFF" in price:
       price = round(float(price[:-6]),2)
     print(price)
     pharmeasy_data = {
         "url":"https://pharmeasy.in"+product_card.a["href"],
         "titile":product_card.h1.text,
-        "pack_size":product_card.find(class_="ProductCard_measurementUnit__hsZ2o").text,
+        "pack_size":product_card.find(class_=re.compile("ProductCard_measurementUnit")).text,
         "price":price
     }
     return pharmeasy_data

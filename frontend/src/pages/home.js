@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -24,10 +24,25 @@ import {
   Td,
   FormControl,
   FormLabel,
+  Popover,
+  PopoverTrigger,
+  Portal,
+  PopoverContent,
+  PopoverArrow,
+  PopoverHeader,
+  PopoverCloseButton,
+  PopoverBody,
+  PopoverFooter,
+  VStack,
+  StackDivider,
+  TableCaption,
+  Progress,
 } from "@chakra-ui/react";
 import { FaPlus } from "react-icons/fa";
 import Footer from "../components/footer";
 import Navbar from "../components/navbar";
+import { Link, useNavigate } from "react-router-dom";
+import { IoEyeSharp } from "react-icons/io5";
 
 const JWT = process.env.REACT_APP_JWT;
 
@@ -76,8 +91,91 @@ export default function Home() {
   const [hospital, setHospital] = useState("");
   const [treatment, setTreatment] = useState("");
   const [treatmentDate, setTreatmentDate] = useState("");
+  const [userData, setUserData] = useState(null);
+  const [medicalData, setMedicalData] = useState(null);
   const toast = useToast();
-  console.log("dbfdkfba",process.env.REACT_APP_JWT);
+  const navigate = useNavigate();
+  const user_id = localStorage.getItem("user_id");
+  useEffect(() => {
+    if (!user_id) {
+      toast({
+        title: "Error",
+        description: "Please Login First.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      navigate("/login");
+    }
+  }, [user_id]);
+
+  const getUserDetails = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/fetch-user-details", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: user_id,
+        }),
+      });
+
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch User Data.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data);
+      setUserData(data.user);
+    } catch (error) {
+      console.error("Error calling API:", error);
+      throw error;
+    }
+  };
+
+  const getMedicalDetails = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/get-documents", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          patient_id: user_id,
+        }),
+      });
+
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch User Data.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data);
+      setMedicalData(data.documents);
+    } catch (error) {
+      console.error("Error calling API:", error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    getUserDetails();
+    getMedicalDetails();
+  }, []);
+
   const handleFileChange = (event) => {
     const newFiles = Array.from(event.target.files); // Convert FileList to array
     setFiles((prevFiles) => [...prevFiles, ...newFiles]); // Add new files to existing list
@@ -130,11 +228,13 @@ export default function Home() {
             await callAddPatientDocumentAPI(hashes);
             toast({
               title: "Success",
-              description: "All files uploaded and document added successfully.",
+              description:
+                "All files uploaded and document added successfully.",
               status: "success",
               duration: 3000,
               isClosable: true,
             });
+            getMedicalDetails();
           }
         };
         reader.readAsDataURL(file);
@@ -155,20 +255,23 @@ export default function Home() {
 
   const callAddPatientDocumentAPI = async (hashes) => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/add-patient-document", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: "vihitk05@gmail.com", // Replace with the actual email
-          report_hashes: hashes,
-          disease: disease,
-          hospital: hospital,
-          treatment: treatment,
-          treatment_date: treatmentDate,
-        }),
-      });
+      const response = await fetch(
+        "http://127.0.0.1:5000/add-patient-document",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userData.email, // Replace with the actual email
+            report_hashes: hashes,
+            disease: disease,
+            hospital: hospital,
+            treatment: treatment,
+            treatment_date: treatmentDate,
+          }),
+        }
+      );
 
       if (!response.ok) {
         toast({
@@ -191,74 +294,151 @@ export default function Home() {
 
   return (
     <>
-      <Navbar />
-      <Box
-        height="600px"
-        display="flex"
-        flexDirection="row"
-        px="1%"
-        py="1%"
-        justifyContent="space-between"
-      >
+      <Navbar login={false} />
+      {userData && medicalData ? (
         <Box
-          width="20%"
-          padding="1%"
+          height="600px"
           display="flex"
+          flexDirection="row"
+          px="1%"
+          py="1%"
           justifyContent="space-between"
-          flexDirection="column"
-          boxShadow="lg"
-          borderRadius="20px"
         >
-          <Box>
-            <Text fontSize="2xl" fontWeight="extrabold" textAlign="center">
-              Vihit Khetle
-            </Text>
-            <Divider mb="5%" />
-            <Text display="flex" justifyContent="space-between">
-              <Text fontWeight="bold">Date of Birth: </Text>05-01-2004
-            </Text>
-            <Text display="flex" justifyContent="space-between">
-              <Text fontWeight="bold">Age: </Text>21
-            </Text>
-            <Text display="flex" justifyContent="space-between">
-              <Text fontWeight="bold">Phone: </Text>+91 9820778858
-            </Text>
-            <Text display="flex" justifyContent="space-between">
-              <Text fontWeight="bold">Address: </Text>Dadar(W), Mumbai
-            </Text>
+          <Box
+            width="20%"
+            padding="1%"
+            display="flex"
+            justifyContent="space-between"
+            flexDirection="column"
+            boxShadow="lg"
+            borderRadius="20px"
+          >
+            <Box>
+              <Text fontSize="2xl" fontWeight="extrabold" textAlign="center">
+                {userData.first_name} {userData.last_name}
+              </Text>
+              <Divider mb="5%" />
+              <Text display="flex" justifyContent="space-between">
+                <Text fontWeight="bold">Date of Birth: </Text>
+                {userData.dob}
+              </Text>
+              <Text display="flex" justifyContent="space-between">
+                <Text fontWeight="bold">Age: </Text>
+                {userData.age}
+              </Text>
+              <Text display="flex" justifyContent="space-between">
+                <Text fontWeight="bold">Phone: </Text>+91 {userData.phone}
+              </Text>
+              <Text display="flex" justifyContent="space-between">
+                <Text fontWeight="bold">Address: </Text>
+                {userData.address}
+              </Text>
+              <Text display="flex" justifyContent="space-between">
+                <Text fontWeight="bold">Email: </Text>
+                {userData.email}
+              </Text>
+            </Box>
+            <Box>
+              <Button colorScheme="yellow">View Records with Public Key</Button>
+            </Box>
           </Box>
-          <Box>
-            <Button colorScheme="yellow">View Records with Public Key</Button>
+          <Box width="78%" padding="2%" boxShadow="lg" borderRadius="20px">
+            <Box display="flex" justifyContent="flex-end">
+              <Button colorScheme="yellow" gap="10px" onClick={onOpen}>
+                Add New Document <FaPlus />
+              </Button>
+            </Box>
+            <TableContainer mt="2%">
+              <Table variant="striped" colorScheme="gray">
+                <Thead>
+                  <Tr>
+                    <Th></Th>
+                    <Th>Disease</Th>
+                    <Th>Hospital</Th>
+                    <Th>Treatment</Th>
+                    <Th>Treatment Date</Th>
+                    <Th>Added By You</Th>
+                    <Th>View Reports</Th>
+                  </Tr>
+                </Thead>
+                {Array.isArray(medicalData) && medicalData.length > 0 ? (
+                  <Tbody>
+                    {medicalData.map((record, index) => (
+                      <Tr key={index}>
+                        <Td>{index + 1}.</Td>
+                        <Td>{record.disease}</Td>
+                        <Td>{record.hospital}</Td>
+                        <Td>{record.treatment}</Td>
+                        <Td>{record.treatment_date}</Td>
+                        <Td>{record.added_by_patient ? "Yes" : "No"}</Td>
+                        <Td>
+                          <Popover>
+                            <PopoverTrigger>
+                              <Button
+                                _hover={{ background: "none" }}
+                                display="flex"
+                                gap="5px"
+                                background="none"
+                              >
+                                <IoEyeSharp fontSize="20px" />
+                              </Button>
+                            </PopoverTrigger>
+                            <Portal>
+                              <PopoverContent>
+                                <PopoverArrow />
+                                <PopoverHeader>Medical Reports</PopoverHeader>
+                                <PopoverCloseButton />
+                                <PopoverBody>
+                                  <VStack
+                                    divider={
+                                      <StackDivider borderColor="gray.200" />
+                                    }
+                                    spacing={2}
+                                  >
+                                    {record.file_details
+                                      .flat()
+                                      .map((report_file, fileIndex) => (
+                                        <Box
+                                          key={fileIndex}
+                                          display="flex"
+                                          gap="10px"
+                                        >
+                                          <Text>{fileIndex + 1}.</Text>
+                                          <Link
+                                            to={report_file.file_url}
+                                            target="_blank"
+                                          >
+                                            <Text
+                                              color="blue"
+                                              textDecoration="underline"
+                                            >
+                                              {report_file.file_name}
+                                            </Text>
+                                          </Link>
+                                        </Box>
+                                      ))}
+                                  </VStack>
+                                </PopoverBody>
+                              </PopoverContent>
+                            </Portal>
+                          </Popover>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                ) : (
+                  <TableCaption>No Medical Records</TableCaption>
+                )}
+              </Table>
+            </TableContainer>
           </Box>
         </Box>
-        <Box width="78%" padding="2%" boxShadow="lg" borderRadius="20px">
-          <Box display="flex" justifyContent="flex-end">
-            <Button colorScheme="yellow" gap="10px" onClick={onOpen}>
-              Add New Document <FaPlus />
-            </Button>
-          </Box>
-          <TableContainer mt="2%">
-            <Table variant="striped" colorScheme="gray">
-              <Thead>
-                <Tr>
-                  <Th>Disease</Th>
-                  <Th>Hospital</Th>
-                  <Th>Treatment</Th>
-                  <Th>Date</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                <Tr>
-                  <Td>Vestibular Neuronitis</Td>
-                  <Td>P.D. Hinduja Hospital</Td>
-                  <Td>Operation</Td>
-                  <Td>27-01-2025</Td>
-                </Tr>
-              </Tbody>
-            </Table>
-          </TableContainer>
+      ) : (
+        <Box margin="20%">
+          <Progress size='xs' isIndeterminate />
         </Box>
-      </Box>
+      )}
+
       <Footer />
 
       {/* Modal */}
@@ -320,7 +500,11 @@ export default function Home() {
                           {file.name}
                         </Text>
                       </Box>
-                      <Box display="flex" justifyContent="space-between" gap="10px">
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        gap="10px"
+                      >
                         <Button
                           size="sm"
                           colorScheme="red"

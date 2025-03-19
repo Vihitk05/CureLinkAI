@@ -17,14 +17,23 @@ import Footer from "../components/footer";
 import Navbar from "../components/navbar";
 import { FaSearch } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function MedicineCompare() {
   const [medicineName, setMedicineName] = useState("");
   const [medicineData, setMedicineData] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  const user_id = localStorage.getItem("user_id");
+  console.log(localStorage.getItem("user_id"));
+  const [login, setLogin] = useState(true);
+  useEffect(()=>{
+    if(user_id){
+      console.log("dbsdbs",user_id);
+      setLogin(false);
+    }
+  },[user_id])
+  
   const handleSearch = async () => {
     if (!medicineName) return;
     setLoading(true);
@@ -46,7 +55,7 @@ export default function MedicineCompare() {
 
   return (
     <>
-      <Navbar />
+      <Navbar login={login} />
       <Box mb="10%">
         <Box mt="5%">
           <Text

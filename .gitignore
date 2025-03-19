@@ -3,4 +3,5 @@
 /blockchain/node_modules
 /backend/.env
 /frontend/.env
+/backend/__pycache__
 /backend/models/disease_prediction_model.pkl

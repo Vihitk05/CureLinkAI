@@ -5,12 +5,13 @@ import {
   InputRightElement,
   Text,
   Button,
+  Progress,
 } from "@chakra-ui/react";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
 import { Search2Icon } from "@chakra-ui/icons";
 // import DiseasePredictionInfo from "../components/diseaseInfo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import TypewriterEffect from "../components/typewriterEffect";
 
@@ -18,7 +19,15 @@ export default function DiseasePrediction() {
   const [symptoms, setSymptoms] = useState("");
   const [prediction, setPrediction] = useState(null);
   const [isThinking, setIsThinking] = useState(false);
-
+  const user_id = localStorage.getItem("user_id");
+  console.log(localStorage.getItem("user_id"));
+  const [login, setLogin] = useState(true);
+  useEffect(() => {
+    if (user_id) {
+      console.log("dbsdbs", user_id);
+      setLogin(false);
+    }
+  }, [user_id]);
   const handleInputChange = (e) => {
     setSymptoms(e.target.value);
   };
@@ -52,7 +61,7 @@ export default function DiseasePrediction() {
 
   return (
     <>
-      <Navbar />
+      <Navbar login={login}/>
       <Box
         minHeight="100vh"
         display="flex"
@@ -67,8 +76,9 @@ export default function DiseasePrediction() {
         >
           <Text fontSize="lg" width="70%" pt="10" mb="10">
             {isThinking ? (
-              <TypewriterEffect text={prediction} repeat={true} speed={100} />
+              <Progress size="xs" isIndeterminate />
             ) : (
+              // <TypewriterEffect text={prediction} repeat={true} speed={100} />
               <TypewriterEffect text={prediction} speed={20} />
             )}
           </Text>
