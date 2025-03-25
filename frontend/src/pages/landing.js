@@ -100,7 +100,7 @@ export default function Landing() {
               padding="20px"
             >
               <Image src="/image4.png" width="300px" height="350px" alt="" />
-              <Link to="/">
+              <Link to="/hospital_login">
                 <Button colorScheme="yellow" width="100%" cursor="pointer">
                   Hospital Login
                 </Button>
