@@ -23,7 +23,7 @@ def one_mg(query):
     print("Title:", elements.find(class_="style__pro-title___3zxNC").text)
     print("Original Price:", elements.find(class_="style__product-pricing___1tj_E").text)
     print("Pack Size:", elements.find(class_="style__pack-size___254Cd").text)
-    one_mg_data["url"] = "https://www.1mg.com/"+elements.a["href"]
+    one_mg_data["url"] = "https://www.1mg.com"+elements.a["href"]
     one_mg_data["title"] = str(elements.find(class_="style__pro-title___3zxNC").text).capitalize()
     one_mg_data["pack_size"] = str(elements.find(class_="style__pack-size___254Cd").text).capitalize()
     price = str(elements.find(class_="style__price-tag___B2csA").text).strip().replace("MRP","")
@@ -32,13 +32,13 @@ def one_mg(query):
     return one_mg_data
   else:
     elements = soup.find_all(class_="style__product-box___3oEU6")[0]
-    print("URL: ","https://www.1mg.com/"+elements.a["href"])
+    print("URL: ","https://www.1mg.com"+elements.a["href"])
     print("Title: ",elements.find(class_="style__pro-title___3G3rr").text)
     print("Pack Size: ",elements.find(class_="style__pack-size___3jScl").text)
     print("Original Price: ",elements.find(class_="style__product-pricing___1OxnE").text)
     price = str(elements.find(class_="style__price-tag___B2csA").text).strip().replace("MRP","")
     print(price)
-    one_mg_data["url"] = "https://www.1mg.com/"+elements.a["href"]
+    one_mg_data["url"] = "https://www.1mg.com"+elements.a["href"]
     one_mg_data["title"] = str(elements.find(class_="style__pro-title___3G3rr").text).capitalize()
     one_mg_data["pack_size"] = str(elements.find(class_="style__pack-size___3jScl").text).capitalize()
     one_mg_data["price"] = price
@@ -94,7 +94,7 @@ def apollopharmacy(query):
   if int(json_data["discountPercentage"])>0:
     apollo_data["discount_percentage"] = json_data["discountPercentage"]
     # apollo_data["discount_price"] = json_data["specialPrice"]
-  apollo_data["discount_price"] = json_data["specialPrice"]
+  apollo_data["price"] = json_data["specialPrice"]
   return apollo_data
 
 

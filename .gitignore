@@ -1,7 +1,45 @@
 /venv
-/frontend/node_modules
-/blockchain/node_modules
+/next-frontend/node_modules
 /backend/.env
-/frontend/.env
+/next-frontend/.env
 /backend/__pycache__
-/backend/models/disease_prediction_model.pkl
+
+# dependencies
+/node_modules
+/next-frontend/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/next-frontend/coverage
+
+# next.js
+/next-frontend/.next/
+/next-frontend/out/
+
+# production
+/next-frontend/build
+
+# misc
+/next-frontend/.DS_Store
+/next-frontend/*.pem
+
+# debug
+/next-frontend/npm-debug.log*
+/next-frontend/yarn-debug.log*
+/next-frontend/yarn-error.log*
+/next-frontend/.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+/next-frontend/.env*
+
+# vercel
+/next-frontend/.vercel
+
+# typescript
+/next-frontend/*.tsbuildinfo
+/next-frontend/next-env.d.ts

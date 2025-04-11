@@ -23,12 +23,32 @@
 			},
 			{
 				"internalType": "string",
-				"name": "treatment",
+				"name": "medication",
 				"type": "string"
 			},
 			{
 				"internalType": "string",
 				"name": "treatmentDate",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "summary",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "doctorName",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "hospitalId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "uploadedDate",
 				"type": "string"
 			}
 		],
@@ -61,12 +81,32 @@
 			},
 			{
 				"internalType": "string",
-				"name": "treatment",
+				"name": "medication",
 				"type": "string"
 			},
 			{
 				"internalType": "string",
 				"name": "treatmentDate",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "summary",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "doctorName",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "hospitalId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "uploadedDate",
 				"type": "string"
 			}
 		],
@@ -84,11 +124,29 @@
 			},
 			{
 				"internalType": "uint256",
-				"name": "reportIndex",
+				"name": "documentId",
 				"type": "uint256"
 			}
 		],
 		"name": "approveReport",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "documentId",
+				"type": "uint256"
+			}
+		],
+		"name": "rejectReport",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -104,14 +162,14 @@
 			},
 			{
 				"indexed": false,
-				"internalType": "string[]",
-				"name": "reportHashes",
-				"type": "string[]"
+				"internalType": "uint256",
+				"name": "documentId",
+				"type": "uint256"
 			},
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "doctorId",
+				"name": "hospitalId",
 				"type": "uint256"
 			}
 		],
@@ -129,25 +187,44 @@
 			},
 			{
 				"indexed": false,
-				"internalType": "string[]",
-				"name": "reportHashes",
-				"type": "string[]"
+				"internalType": "uint256",
+				"name": "documentId",
+				"type": "uint256"
 			}
 		],
 		"name": "ReportApproved",
 		"type": "event"
 	},
 	{
-		"inputs": [],
-		"name": "getHelloWorld",
-		"outputs": [
+		"anonymous": false,
+		"inputs": [
 			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "documentId",
+				"type": "uint256"
 			}
 		],
-		"stateMutability": "pure",
+		"name": "ReportRejected",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "getCurrentDocumentId",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -173,6 +250,121 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
+				"name": "hospitalId",
+				"type": "uint256"
+			}
+		],
+		"name": "getReportsByHospitalId",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "reportsByHospital",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "patientId",
+				"type": "uint256"
+			},
+			{
+				"components": [
+					{
+						"internalType": "string[]",
+						"name": "reportHashes",
+						"type": "string[]"
+					},
+					{
+						"internalType": "uint256",
+						"name": "hospitalId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "doctorName",
+						"type": "string"
+					},
+					{
+						"internalType": "bool",
+						"name": "isApproved",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "isRejected",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "addedByPatient",
+						"type": "bool"
+					},
+					{
+						"internalType": "string",
+						"name": "disease",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "hospital",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "medication",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "treatmentDate",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "summary",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "documentId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "uploadedDate",
+						"type": "string"
+					}
+				],
+				"internalType": "struct MedicalReport.Report",
+				"name": "report",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
 			},
@@ -186,12 +378,22 @@
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "doctorId",
+				"name": "hospitalId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "doctorName",
+				"type": "string"
 			},
 			{
 				"internalType": "bool",
 				"name": "isApproved",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "isRejected",
 				"type": "bool"
 			},
 			{
@@ -211,12 +413,27 @@
 			},
 			{
 				"internalType": "string",
-				"name": "treatment",
+				"name": "medication",
 				"type": "string"
 			},
 			{
 				"internalType": "string",
 				"name": "treatmentDate",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "summary",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "documentId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "uploadedDate",
 				"type": "string"
 			}
 		],
